@@ -80,5 +80,12 @@ fn main() {
 }
 
 fn display(value: &f64) {
-    println!("CPU {:5.2}%", value);
+    let span = if *value >= 50f64 && *value < 80f64 {
+        "<span color='#FFA500'>"
+    } else if *value >= 80f64 {
+        "<span color='#FF7373'>"
+    } else {
+        "<span>"
+    };
+    println!("CPU {}{:5.2}%</span>", span, value);
 }
