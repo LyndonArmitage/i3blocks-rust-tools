@@ -10,10 +10,23 @@ struct Args {
 struct CPUData {
     used: u64,
     total: u64,
+    last_used: u64,
+    last_total: u64,
 }
 
 impl CPUData {
     fn from_path(path: &str) -> Self {
+        let mut data = CPUData {
+            total: 0,
+            used: 0,
+            last_used: 0,
+            last_total: 0,
+        };
+        data.update_from_path(path);
+        return data;
+    }
+
+    fn update_from_path(&mut self, path: &str) {
         let data = std::fs::read_to_string(path).unwrap();
         let mut user: u64 = 0;
         let mut nice: u64 = 0;
@@ -58,7 +71,14 @@ impl CPUData {
         let used = user + nice + system + irq + softirq + steal + guest + guest_nice;
         let total = used + idle + iowait;
 
-        CPUData { total, used }
+        self.set_new(used, total);
+    }
+
+    fn set_new(&mut self, used: u64, total: u64) {
+        self.used = used;
+        self.total = total;
+        self.last_total = self.total;
+        self.last_used = self.used;
     }
 }
 
@@ -68,13 +88,12 @@ fn main() {
     let args = Args::parse();
     let sleep_duration = std::time::Duration::new(args.seconds as u64, 0);
 
-    let mut last_value = CPUData::from_path(PATH);
+    let mut cpu = CPUData::from_path(PATH);
     loop {
-        let cpu = CPUData::from_path(PATH);
+        cpu.update_from_path(PATH);
         let value: f64 =
-            100f64 * (cpu.used - last_value.used) as f64 / (cpu.total - last_value.total) as f64;
+            100f64 * (cpu.used - cpu.last_used) as f64 / (cpu.total - cpu.last_total) as f64;
         display(&value);
-        last_value = cpu;
         std::thread::sleep(sleep_duration);
     }
 }
